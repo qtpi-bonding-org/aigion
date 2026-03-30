@@ -1,0 +1,15 @@
+git.{$DOMAIN} {
+	reverse_proxy forgejo:3000
+}
+
+post.{$DOMAIN} {
+	reverse_proxy postiz:5000
+}
+
+api.{$DOMAIN} {
+	reverse_proxy synedrion:8080
+}
+
+web.{$DOMAIN} {
+	reverse_proxy synedrion:8082
+}

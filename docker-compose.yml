@@ -1,0 +1,196 @@
+include:
+  - path: achaean/docker-compose.yml
+
+services:
+  # --- Reverse Proxy ---
+  caddy:
+    image: caddy:2-alpine
+    container_name: aigion-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN}
+    depends_on:
+      - forgejo
+      - synedrion
+      - postiz
+
+  # --- Forgejo Runner ---
+  forgejo-runner:
+    image: data.forgejo.org/forgejo/runner:11
+    container_name: aigion-forgejo-runner
+    restart: unless-stopped
+    user: "0:0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - forgejo_runner_data:/data
+      - ./runner/config.yml:/config/config.yml:ro
+      - ./runner/register.sh:/register.sh:ro
+    environment:
+      - FORGEJO_URL=http://forgejo:3000
+      - RUNNER_SECRET=${FORGEJO_RUNNER_SECRET}
+    depends_on:
+      - forgejo
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        if [ ! -f /data/.runner ]; then
+          /register.sh
+        fi
+        forgejo-runner daemon --config /config/config.yml
+
+  # --- Postiz (Syndication) ---
+  postiz:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: aigion-postiz
+    restart: unless-stopped
+    environment:
+      MAIN_URL: https://post.${DOMAIN}
+      FRONTEND_URL: https://post.${DOMAIN}
+      NEXT_PUBLIC_BACKEND_URL: https://post.${DOMAIN}/api
+      JWT_SECRET: ${POSTIZ_JWT_SECRET}
+      DATABASE_URL: postgresql://${POSTIZ_DB_USER:-postiz}:${POSTIZ_DB_PASS:-postiz}@postiz-postgres:5432/${POSTIZ_DB_NAME:-postiz}
+      REDIS_URL: redis://postiz-redis:6379
+      BACKEND_INTERNAL_URL: http://localhost:3000
+      TEMPORAL_ADDRESS: temporal:7233
+      IS_GENERAL: 'true'
+      DISABLE_REGISTRATION: 'true'
+      STORAGE_PROVIDER: 'local'
+      UPLOAD_DIRECTORY: '/uploads'
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: '/uploads'
+      # Social media API keys
+      X_API_KEY: ${X_API_KEY:-}
+      X_API_SECRET: ${X_API_SECRET:-}
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID:-}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET:-}
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+      THREADS_APP_ID: ${THREADS_APP_ID:-}
+      THREADS_APP_SECRET: ${THREADS_APP_SECRET:-}
+      MASTODON_URL: ${MASTODON_URL:-https://mastodon.social}
+      MASTODON_CLIENT_ID: ${MASTODON_CLIENT_ID:-}
+      MASTODON_CLIENT_SECRET: ${MASTODON_CLIENT_SECRET:-}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID:-}
+      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET:-}
+      TIKTOK_CLIENT_ID: ${TIKTOK_CLIENT_ID:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      DISCORD_BOT_TOKEN_ID: ${DISCORD_BOT_TOKEN_ID:-}
+      SLACK_ID: ${SLACK_ID:-}
+      SLACK_SECRET: ${SLACK_SECRET:-}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
+      # Misc
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      NX_ADD_PLUGINS: false
+      API_LIMIT: 30
+      # Stripe (disabled)
+      FEE_AMOUNT: 0.05
+      STRIPE_PUBLISHABLE_KEY: ''
+      STRIPE_SECRET_KEY: ''
+      STRIPE_SIGNING_KEY: ''
+      STRIPE_SIGNING_KEY_CONNECT: ''
+    volumes:
+      - postiz_config:/config/
+      - postiz_uploads:/uploads/
+    depends_on:
+      postiz-postgres:
+        condition: service_healthy
+      postiz-redis:
+        condition: service_healthy
+
+  # --- Postiz Postgres (shared with Temporal) ---
+  postiz-postgres:
+    image: postgres:17-alpine
+    container_name: aigion-postiz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTIZ_DB_USER:-postiz}
+      POSTGRES_PASSWORD: ${POSTIZ_DB_PASS:-postiz}
+      POSTGRES_DB: ${POSTIZ_DB_NAME:-postiz}
+      TEMPORAL_DB_USER: ${TEMPORAL_DB_USER:-temporal}
+      TEMPORAL_DB_PASS: ${TEMPORAL_DB_PASS:-temporal}
+    volumes:
+      - postiz_postgres_data:/var/lib/postgresql/data
+      - ./db/postiz-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: pg_isready -U ${POSTIZ_DB_USER:-postiz}
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # --- Redis ---
+  postiz-redis:
+    image: redis:7.2
+    container_name: aigion-postiz-redis
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postiz_redis_data:/data
+
+  # --- Temporal ---
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    container_name: aigion-temporal
+    restart: unless-stopped
+    depends_on:
+      postiz-postgres:
+        condition: service_healthy
+      temporal-elasticsearch:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${TEMPORAL_DB_USER:-temporal}
+      - POSTGRES_PWD=${TEMPORAL_DB_PASS:-temporal}
+      - POSTGRES_SEEDS=postiz-postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-elasticsearch
+      - ES_VERSION=v7
+      - TEMPORAL_NAMESPACE=default
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+
+  temporal-elasticsearch:
+    image: elasticsearch:7.17.27
+    container_name: aigion-temporal-elasticsearch
+    restart: unless-stopped
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    volumes:
+      - temporal_elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green\|yellow"'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  caddy_data:
+  caddy_config:
+  forgejo_runner_data:
+  postiz_config:
+  postiz_uploads:
+  postiz_postgres_data:
+  postiz_redis_data:
+  temporal_elasticsearch_data:

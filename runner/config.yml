@@ -1,0 +1,17 @@
+log:
+  level: info
+
+runner:
+  capacity: 1
+  timeout: 3h
+  labels:
+    - "ubuntu-latest:docker://node:20-bookworm"
+    - "ubuntu-22.04:docker://node:20-bookworm"
+
+container:
+  network: aigion_default
+  valid_volumes:
+    - /var/run/docker.sock
+
+cache:
+  enabled: false
