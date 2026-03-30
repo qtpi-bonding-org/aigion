@@ -36,7 +36,8 @@ services:
       - FORGEJO_URL=http://forgejo:3000
       - RUNNER_SECRET=${FORGEJO_RUNNER_SECRET}
     depends_on:
-      - forgejo
+      forgejo:
+        condition: service_healthy
     entrypoint: /bin/sh
     command:
       - -c

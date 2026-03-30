@@ -56,13 +56,29 @@ docker exec --user 1000 achaean-forgejo forgejo admin user create \
   && pass "Admin user exists" \
   || pass "Admin user created"
 
-# --- Ensure runner is registered ---
-info "Ensuring runner is registered on Forgejo..."
+# --- Register runner on Forgejo side ---
+info "Registering runner on Forgejo side..."
 docker exec --user 1000 achaean-forgejo forgejo forgejo-cli actions register \
   --name aigion-runner --secret "$RUNNER_SECRET" > /dev/null 2>&1 || true
-pass "Runner registered"
+pass "Runner registered on Forgejo"
 
-# Verify runner is declared
+# Restart runner so it picks up the registration
+info "Restarting runner to pick up registration..."
+docker restart aigion-forgejo-runner > /dev/null 2>&1
+
+# Wait for runner to declare successfully
+info "Waiting for runner to connect (up to 30s)..."
+RUNNER_WAIT=0
+while [ "$RUNNER_WAIT" -lt 30 ]; do
+  sleep 3
+  RUNNER_WAIT=$((RUNNER_WAIT + 3))
+  if docker logs aigion-forgejo-runner 2>&1 | tail -3 | grep -q "declared successfully"; then
+    break
+  fi
+  echo -n "."
+done
+echo ""
+
 docker logs aigion-forgejo-runner 2>&1 | tail -5 | grep -q "declared successfully" \
   || { fail "Runner not declared — check runner logs"; exit 1; }
 pass "Runner is declared and polling"
