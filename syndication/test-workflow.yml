@@ -1,0 +1,84 @@
+name: Syndicate to Social Media
+on:
+  push:
+    paths:
+      - 'posts/**'
+jobs:
+  syndicate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Find changed posts
+        id: find
+        run: |
+          changed=$(git diff --name-only HEAD~1..HEAD -- 'posts/*/post.json' 'posts/*/*/post.json' || true)
+          if [ -z "$changed" ]; then
+            echo "No post.json changes. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changed: $changed"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "$changed" > /tmp/changed_posts.txt
+          fi
+
+      - name: Syndicate to Postiz
+        if: steps.find.outputs.skip != 'true'
+        env:
+          POSTIZ_KEY: test-key-placeholder
+          POSTIZ_URL: http://postiz:5000
+        run: |
+          while IFS= read -r post_file; do
+            echo "=== Processing: $post_file ==="
+
+            has_postiz=$(jq -r '.crosspost.postiz // empty' "$post_file")
+            if [ -z "$has_postiz" ]; then
+              echo "No crosspost.postiz - skipping"
+              continue
+            fi
+
+            timestamp=$(jq -r '.timestamp // empty' "$post_file")
+            if [ -z "$timestamp" ]; then
+              timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            fi
+
+            tags=$(jq -c '[(.routing.tags // [])[] | {value: ., label: .}]' "$post_file")
+
+            posts_array=$(jq -c '
+              [.crosspost.postiz | to_entries[] |
+                select(.value.integration_id != null) |
+                {
+                  integration: {id: .value.integration_id},
+                  value: [.value.posts[] | {content: ("<p>" + . + "</p>"), image: []}]
+                }
+              ]' "$post_file")
+
+            payload=$(jq -nc \
+              --arg date "$timestamp" \
+              --argjson tags "$tags" \
+              --argjson posts "$posts_array" \
+              '{type: "now", shortLink: false, date: $date, tags: $tags, posts: $posts}')
+
+            echo "Payload:"
+            echo "$payload" | jq .
+
+            echo "Sending to Postiz..."
+            http_code=$(curl -sL -o /tmp/postiz_response.txt -w '%{http_code}' \
+              -X POST "$POSTIZ_URL/public/v1/posts" \
+              -H "Authorization: $POSTIZ_KEY" \
+              -H "Content-Type: application/json" \
+              -d "$payload")
+
+            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+              echo "Published (HTTP $http_code)"
+            else
+              echo "Failed (HTTP $http_code)"
+              head -c 500 /tmp/postiz_response.txt
+              echo ""
+            fi
+          done < /tmp/changed_posts.txt
+
+          echo "Syndication complete."

@@ -51,10 +51,12 @@ services:
     image: ghcr.io/gitroomhq/postiz-app:latest
     container_name: aigion-postiz
     restart: unless-stopped
+    ports:
+      - "${POSTIZ_PORT:-4007}:5000"
     environment:
-      MAIN_URL: https://post.${DOMAIN}
-      FRONTEND_URL: https://post.${DOMAIN}
-      NEXT_PUBLIC_BACKEND_URL: https://post.${DOMAIN}/api
+      MAIN_URL: ${POSTIZ_MAIN_URL:-https://post.${DOMAIN}}
+      FRONTEND_URL: ${POSTIZ_FRONTEND_URL:-https://post.${DOMAIN}}
+      NEXT_PUBLIC_BACKEND_URL: ${POSTIZ_BACKEND_URL:-https://post.${DOMAIN}/api}
       JWT_SECRET: ${POSTIZ_JWT_SECRET}
       DATABASE_URL: postgresql://${POSTIZ_DB_USER:-postiz}:${POSTIZ_DB_PASS:-postiz}@postiz-postgres:5432/${POSTIZ_DB_NAME:-postiz}
       REDIS_URL: redis://postiz-redis:6379

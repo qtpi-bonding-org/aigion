@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://achaean.org/schemas/post.schema.json",
+  "title": "Achaean Post",
+  "description": "Schema for Achaean koinon post.json files",
+  "type": "object",
+  "required": ["content", "timestamp", "signature"],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The post content. One sentence or ten paragraphs."
+        },
+        "title": {
+          "type": "string",
+          "description": "Headline. Rendered prominently when present."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "A link. Client renders a preview."
+        },
+        "media": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Filenames of images/assets in the post directory."
+        }
+      },
+      "additionalProperties": false
+    },
+    "routing": {
+      "type": "object",
+      "properties": {
+        "poleis": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Which poleis this post is tagged for."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Hashtags / topic tags."
+        },
+        "mentions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Public keys of mentioned politai."
+        }
+      },
+      "additionalProperties": false
+    },
+    "details": {
+      "type": "object",
+      "description": "Freeform structured metadata. Shape determined by polis conventions."
+    },
+    "crosspost": {
+      "type": "object",
+      "description": "Per-backend syndication config. Each key is a syndication backend.",
+      "properties": {
+        "postiz": {
+          "$ref": "#/$defs/postizCrosspost"
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "description": "Unknown syndication backend. Shape is backend-specific."
+      }
+    },
+    "parent": {
+      "$ref": "#/$defs/parentRef"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the post was created."
+    },
+    "signature": {
+      "type": "string",
+      "description": "Web Crypto signature of the post content."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "postizCrosspost": {
+      "type": "object",
+      "description": "Postiz syndication config. Keys are platform names (arbitrary), values define per-platform output.",
+      "additionalProperties": {
+        "$ref": "#/$defs/postizPlatform"
+      }
+    },
+    "postizPlatform": {
+      "type": "object",
+      "required": ["integration_id", "posts"],
+      "properties": {
+        "integration_id": {
+          "type": "string",
+          "description": "Postiz integration ID for this platform."
+        },
+        "posts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Array of text content. Single item = one post. Multiple items = thread."
+        }
+      },
+      "additionalProperties": false
+    },
+    "parentRef": {
+      "type": "object",
+      "description": "Reference to parent post (replies only).",
+      "required": ["author", "repo", "path", "commit"],
+      "properties": {
+        "author": {
+          "type": "string",
+          "description": "Parent author's public key."
+        },
+        "repo": {
+          "type": "string",
+          "description": "Parent author's repo ID."
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to parent's post.json."
+        },
+        "commit": {
+          "type": "string",
+          "description": "Git commit hash of the parent post."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
