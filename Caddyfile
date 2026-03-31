@@ -17,3 +17,7 @@ web.{$DOMAIN} {
 auth.{$DOMAIN} {
 	reverse_proxy dex:5556
 }
+
+chat.{$DOMAIN} {
+	reverse_proxy tuwunel:8008
+}

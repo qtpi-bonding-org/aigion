@@ -20,7 +20,6 @@ services:
       - forgejo
       - synedrion
       - postiz
-      - dex
 
   # --- Forgejo Runner ---
   forgejo-runner:
@@ -188,40 +187,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
-  # --- Dex Setup (one-shot init) ---
-  dex-setup:
-    image: codeberg.org/forgejo/forgejo:14
-    container_name: aigion-dex-setup
-    user: "1000:1000"
-    depends_on:
-      forgejo:
-        condition: service_healthy
-    volumes:
-      - forgejo_data:/data
-      - ./dex/setup.sh:/setup.sh:ro
-      - ./dex/config.template.yaml:/config.template.yaml:ro
-    environment:
-      - FORGEJO_ADMIN_USER=${FORGEJO_ADMIN_USER:-aigion-admin}
-      - FORGEJO_ADMIN_PASS=${FORGEJO_ADMIN_PASS}
-      - FORGEJO_ADMIN_EMAIL=${FORGEJO_ADMIN_EMAIL:-admin@example.com}
-      - DOMAIN=${DOMAIN}
-    entrypoint: /bin/sh
-    command: /setup.sh
-
-  # --- Dex (OIDC Proxy) ---
-  dex:
-    image: dexidp/dex:v2.41.1
-    container_name: aigion-dex
-    restart: unless-stopped
-    depends_on:
-      dex-setup:
-        condition: service_completed_successfully
-    volumes:
-      - forgejo_data:/data:ro
-    command: dex serve /data/gitea/dex/config.yaml
-    ports:
-      - "${DEX_PORT:-5556}:5556"
 
 volumes:
   caddy_data:
