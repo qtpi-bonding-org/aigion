@@ -1,0 +1,23 @@
+issuer: __ISSUER__
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+connectors:
+  - type: gitea
+    id: forgejo
+    name: Forgejo
+    config:
+      clientID: __DEX_FORGEJO_CLIENT_ID__
+      clientSecret: __DEX_FORGEJO_CLIENT_SECRET__
+      redirectURI: __ISSUER__/callback
+      baseURL: __FORGEJO_URL__
+      useLoginAsID: true
+      loadAllGroups: false
+
+staticClients: []
+
+enablePasswordDB: false

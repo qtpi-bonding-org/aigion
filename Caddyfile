@@ -13,3 +13,7 @@ api.{$DOMAIN} {
 web.{$DOMAIN} {
 	reverse_proxy synedrion:8082
 }
+
+auth.{$DOMAIN} {
+	reverse_proxy dex:5556
+}
