@@ -24,11 +24,11 @@ if [ -z "$ADMIN_PASS" ]; then
   exit 1
 fi
 
-POSTIZ_INTERNAL="http://postiz:5000"
+POSTIZ_URL="http://127.0.0.1:${POSTIZ_PORT:-4007}"
 
 echo "[postiz-seed] Creating first user: $ADMIN_EMAIL"
 
-RESPONSE=$(docker compose exec -T postiz curl -sf -X POST "$POSTIZ_INTERNAL/auth/register" \
+RESPONSE=$(curl -sf -X POST "$POSTIZ_URL/auth/register" \
   -H "Content-Type: application/json" \
   -d "{
     \"email\": \"$ADMIN_EMAIL\",
