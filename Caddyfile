@@ -2,7 +2,9 @@ git.{$DOMAIN} {
 	reverse_proxy forgejo:3000
 }
 
-post.{$DOMAIN} {
+# Keep the generated sslip hostname available while the stable public hostname
+# is the canonical OAuth/login endpoint for Postiz.
+post.{$DOMAIN}, postiz.qtpi.app {
 	reverse_proxy postiz:5000
 }
 
