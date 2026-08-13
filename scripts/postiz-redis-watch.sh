@@ -21,12 +21,13 @@ set +e
 timeout "$duration_seconds" \
   docker compose -f "$repo_root/docker-compose.yml" exec -T postiz-redis redis-cli MONITOR |
   awk '
-    /"SET" "login:/          { print "OAuth state stored"; next }
-    /"GET" "login:/          { print "OAuth state looked up"; next }
-    /"DEL" "login:/          { print "OAuth state consumed"; next }
-    /"SET" "organization:/   { print "OAuth organization stored"; next }
-    /"GET" "organization:/   { print "OAuth organization looked up"; next }
-    /"DEL" "organization:/   { print "OAuth organization consumed"; next }
+    function emit(message) { print message; fflush() }
+    /"SET" "login:/          { emit("OAuth state stored"); next }
+    /"GET" "login:/          { emit("OAuth state looked up"); next }
+    /"DEL" "login:/          { emit("OAuth state consumed"); next }
+    /"SET" "organization:/   { emit("OAuth organization stored"); next }
+    /"GET" "organization:/   { emit("OAuth organization looked up"); next }
+    /"DEL" "organization:/   { emit("OAuth organization consumed"); next }
   '
 monitor_status=${PIPESTATUS[0]}
 set -e
