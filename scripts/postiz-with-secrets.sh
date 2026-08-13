@@ -28,5 +28,11 @@ echo "Recreating Postiz with encrypted provider credentials injected."
 echo "No credential values will be printed."
 
 cd "$repo_root"
+if "$sops_bin" --output-type json -d "$secrets_file" | \
+  python3 -c 'import json, sys; sys.exit(0 if not json.load(sys.stdin) else 1)'; then
+  echo "Encrypted provider file is empty; recreating Postiz without provider overrides."
+  exec docker compose up -d --force-recreate postiz
+fi
+
 exec "$sops_bin" exec-env "$secrets_file" -- \
   docker compose up -d --force-recreate postiz
