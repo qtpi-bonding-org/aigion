@@ -44,8 +44,12 @@ services:
     command:
       - -c
       - |
-        if [ ! -f /data/.runner ]; then
+        # Runner v12 must connect while creating the identity file. The marker
+        # forces a one-time refresh of identities created by the old v11 path.
+        if [ ! -f /data/.runner-v2 ]; then
+          rm -f /data/.runner
           /register.sh
+          touch /data/.runner-v2
         fi
         forgejo-runner daemon --config /config/config.yml
 

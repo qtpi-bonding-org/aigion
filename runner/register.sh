@@ -8,6 +8,7 @@ done
 
 echo "Registering runner with Forgejo..."
 forgejo-runner create-runner-file \
+  --connect \
   --instance "$FORGEJO_URL" \
   --secret "$RUNNER_SECRET" \
   --name aigion-runner
