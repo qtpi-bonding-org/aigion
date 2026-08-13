@@ -55,7 +55,7 @@ services:
 
   # --- Postiz (Syndication) ---
   postiz:
-    image: ghcr.io/gitroomhq/postiz-app:latest
+    image: ${POSTIZ_IMAGE:-ghcr.io/gitroomhq/postiz-app:latest}
     container_name: aigion-postiz
     restart: unless-stopped
     ports:
