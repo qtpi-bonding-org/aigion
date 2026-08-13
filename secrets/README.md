@@ -69,6 +69,9 @@ cd ~/.config/aigion
 sops postiz.enc.yaml
 ```
 
+The Aigion launch and scrubber scripts automatically use
+`~/.config/sops/age/keys.txt` when `SOPS_AGE_KEY_FILE` is not already set.
+
 Before adding real credentials, test redaction using a unique disposable
 value:
 

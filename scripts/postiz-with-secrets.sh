@@ -7,6 +7,11 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 secrets_file="${AIGION_POSTIZ_SECRETS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/aigion/postiz.enc.yaml}"
 sops_bin="${SOPS_BIN:-sops}"
+default_age_key="$HOME/.config/sops/age/keys.txt"
+
+if [[ -z "${SOPS_AGE_KEY_FILE:-}" && -f "$default_age_key" ]]; then
+  export SOPS_AGE_KEY_FILE="$default_age_key"
+fi
 
 if ! command -v "$sops_bin" >/dev/null 2>&1; then
   echo "error: sops is required but was not found: $sops_bin" >&2

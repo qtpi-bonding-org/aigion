@@ -5,6 +5,11 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 sops_bin="${SOPS_BIN:-sops}"
+default_age_key="$HOME/.config/sops/age/keys.txt"
+
+if [[ -z "${SOPS_AGE_KEY_FILE:-}" && -f "$default_age_key" ]]; then
+  export SOPS_AGE_KEY_FILE="$default_age_key"
+fi
 
 if [[ $# -lt 4 || "$1" != "--secrets" || "$3" != "--" ]]; then
   echo "usage: $0 --secrets ENCRYPTED_FILE -- COMMAND [ARG...]" >&2
