@@ -72,6 +72,18 @@ SOPS_BIN="$HOME/.local/bin/sops" \
 `scripts/postiz-scrubbed-exec.sh` is a convenience wrapper for that same
 command using `~/.config/aigion/postiz.enc.yaml`.
 
+From a local Aigion checkout, the usual short form is:
+
+```bash
+./scripts/aigion-scrubbed.sh 'docker inspect aigion-postiz'
+```
+
+It sends one command to the VPS through the `aigion` SSH alias, with the
+Postiz secret file and scrubber selected remotely. The command is passed over
+stdin instead of interpolated into the SSH command. This default is for
+Postiz-related diagnostics; use `sops-scrubbed-exec.sh --secrets ...` directly
+on the VPS for another encrypted file.
+
 This is an accidental-output guardrail, not an isolation boundary. It cannot
 prevent a command from transforming or transmitting a secret, and must not be
 used for interactive commands or as permission to inspect credentials.
