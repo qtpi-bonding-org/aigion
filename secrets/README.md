@@ -25,6 +25,18 @@ THREADS_APP_ID: replace-me
 THREADS_APP_SECRET: replace-me
 ```
 
+This is also the central encrypted inventory for the VPS. It may hold other
+top-level scalar values, such as:
+
+```yaml
+BLUESKY_ACCOUNT_PASSWORD: replace-me
+```
+
+The scrubbed wrappers load and redact all literal values in the inventory.
+The Postiz launcher injects only its explicit allowlist of Postiz provider
+configuration keys; account passwords and unrelated secrets are not copied
+into the Postiz container environment.
+
 Encrypt/edit it only in a trusted interactive SSH session:
 
 ```sh
@@ -103,11 +115,11 @@ From the Aigion checkout on the VPS:
 ./scripts/postiz-with-secrets.sh
 ```
 
-The script runs `docker compose up -d --force-recreate postiz` through
-`sops exec-env`. Compose gives shell environment variables precedence over
-the values in `.env`, so only the provider variables in the encrypted file
-are injected into the newly created Postiz container. The decrypted values
-are not written to the checkout or printed by the script.
+The script runs `docker compose up -d --force-recreate postiz` with only its
+allowlisted provider variables from the encrypted inventory. Compose gives
+those variables precedence over values in `.env`. Other inventory values are
+not injected into the newly created Postiz container. The decrypted values are
+not written to the checkout or printed by the script.
 
 The container retains its configured environment until it is recreated. Run
 the script again after adding or rotating provider application credentials.
@@ -169,7 +181,8 @@ wrapper for a necessary, non-interactive operation. It must:
 
 - never ask for, read, print, copy, summarize, encode, transform, or
   deliberately inspect decrypted credential values;
-- prefer ordinary commands when no secret is needed;
+- prefer ordinary commands when no secret is needed, and otherwise use the
+  scrubbed path rather than raw SSH output;
 - use `./scripts/aigion-scrubbed.sh 'COMMAND'` from a local checkout for a
   Postiz-related diagnostic that needs secret context; and
 - use `scripts/sops-scrubbed-exec.sh --secrets FILE -- COMMAND` on the VPS for
