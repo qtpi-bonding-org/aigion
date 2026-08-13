@@ -20,7 +20,9 @@ they need a deliberate summary/canonical-link policy, not an automatic
 truncation or accidental full-text crosspost.
 
 Per-channel integration IDs belong only in `postiz-routing.json`; copy the
-example and do not commit the real file.
+example and do not commit the real file. List the public routing metadata with
+`./scripts/achaean-postiz.sh integrations`; it prints only provider, public
+profile/name, integration ID, and disabled state.
 
 ## First test
 
@@ -30,11 +32,11 @@ python3 syndication/syndicate.py --post path/to/post.json
 ```
 
 The first command is a dry run and prints its draft payload. After configuring
-one integration ID and storing `POSTIZ_API_URL` and `POSTIZ_API_KEY` in the
-encrypted Aigion inventory:
+one integration ID and storing `POSTIZ_API_KEY` in the encrypted Aigion
+inventory:
 
 ```sh
-python3 syndication/syndicate.py --post path/to/post.json --submit
+./scripts/achaean-postiz.sh draft --post path/to/post.json
 ```
 
 `--submit` creates a Postiz draft only. Review and publish it in Postiz.
