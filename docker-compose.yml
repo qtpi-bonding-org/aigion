@@ -23,7 +23,9 @@ services:
 
   # --- Forgejo Runner ---
   forgejo-runner:
-    image: data.forgejo.org/forgejo/runner:11
+    # Forgejo v14 rejects the obsolete v11 runner protocol. Keep an explicit
+    # image pin so runner upgrades are reviewed with the server version.
+    image: data.forgejo.org/forgejo/runner:12.10.2
     container_name: aigion-forgejo-runner
     restart: unless-stopped
     user: "0:0"
