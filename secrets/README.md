@@ -111,7 +111,9 @@ the script again after adding or rotating provider application credentials.
 For any SOPS-encrypted file, use `scripts/sops-scrubbed-exec.sh`. It decrypts
 the file into a temporary private file, passes top-level scalar values only to
 the child process, and replaces literal secret values (including nested values)
-in combined stdout/stderr before returning output. For example:
+in combined stdout/stderr before returning output. A top-level value such as
+`X_API_SECRET` is displayed as `[REDACTED:X_API_SECRET]`, so diagnostics retain
+the name of the protected field. For example:
 
 ```bash
 SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \

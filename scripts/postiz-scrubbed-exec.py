@@ -15,19 +15,27 @@ import sys
 from pathlib import Path
 
 
-def string_values(value: object) -> list[str]:
+def labeled_string_values(value: object, path: str = "") -> list[tuple[str, str]]:
     if isinstance(value, str):
-        return [value]
+        return [(value, path)]
     if isinstance(value, dict):
-        return [item for child in value.values() for item in string_values(child)]
+        return [
+            item
+            for key, child in value.items()
+            for item in labeled_string_values(child, f"{path}.{key}" if path else key)
+        ]
     if isinstance(value, list):
-        return [item for child in value for item in string_values(child)]
+        return [
+            item
+            for index, child in enumerate(value)
+            for item in labeled_string_values(child, f"{path}[{index}]")
+        ]
     return []
 
 
-def redact(data: bytes, values: list[bytes]) -> bytes:
-    for value in values:
-        data = data.replace(value, b"[REDACTED]")
+def redact(data: bytes, values: list[tuple[bytes, bytes]]) -> bytes:
+    for value, label in values:
+        data = data.replace(value, b"[REDACTED:" + label + b"]")
     return data
 
 
@@ -40,11 +48,12 @@ def main() -> int:
     if not isinstance(decoded, dict):
         print("SOPS document must decode to a top-level mapping", file=sys.stderr)
         return 2
-    values = sorted(
-        {value.encode("utf-8") for value in string_values(decoded) if value},
-        key=len,
-        reverse=True,
-    )
+    values_by_value = {
+        value.encode("utf-8"): label.encode("utf-8")
+        for value, label in labeled_string_values(decoded)
+        if value
+    }
+    values = sorted(values_by_value.items(), key=lambda item: len(item[0]), reverse=True)
     env = os.environ.copy()
     # Top-level scalar values are convenient environment variables for service
     # commands. Nested values are still scrubbed but are not coerced into env.
