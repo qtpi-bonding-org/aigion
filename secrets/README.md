@@ -85,9 +85,15 @@ From a local Aigion checkout, this must return `[REDACTED]`, never the value:
 ./scripts/aigion-scrubbed.sh 'printf "%s\n" "$TEST_PASSWORD"'
 ```
 
-Delete `TEST_PASSWORD` afterwards and save again with `sops`. An empty
-encrypted mapping is valid: the Postiz launcher detects it and recreates
-Postiz without provider overrides until you add real keys.
+Delete `TEST_PASSWORD` afterwards and remove the now-empty encrypted file:
+
+```sh
+rm ~/.config/aigion/postiz.enc.yaml
+```
+
+No provider file is needed for Bluesky-only setup. The Postiz launcher detects
+that state and recreates Postiz without provider overrides until you add real
+keys.
 
 ## Launch Postiz with credentials
 

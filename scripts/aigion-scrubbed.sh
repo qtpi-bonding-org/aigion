@@ -13,7 +13,11 @@ fi
 # is captured and redacted before it returns here.
 printf '%s\n' "$1" | ssh aigion '
   cd /home/cduser/aigion
-  SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
-  SOPS_BIN="$HOME/.local/bin/sops" \
-  ./scripts/postiz-scrubbed-exec.sh bash -s
+  if [ -f "$HOME/.config/aigion/postiz.enc.yaml" ]; then
+    SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
+    SOPS_BIN="$HOME/.local/bin/sops" \
+    ./scripts/postiz-scrubbed-exec.sh bash -s
+  else
+    bash -s
+  fi
 '
