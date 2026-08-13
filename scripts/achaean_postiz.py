@@ -19,8 +19,11 @@ def fail(message: str) -> "NoReturn":
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("--secrets", required=True, type=Path)
-parser.add_argument("--", dest="separator", action="store_true")
-args, command = parser.parse_known_args()
+if "--" not in sys.argv:
+    fail("expected -- before the command")
+separator = sys.argv.index("--")
+args = parser.parse_args(sys.argv[1:separator])
+command = sys.argv[separator + 1 :]
 if not command:
     fail("expected integrations or draft")
 
