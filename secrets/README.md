@@ -38,6 +38,52 @@ Do not paste values into an agent chat or run a command that prints the
 decrypted file. SOPS/age installation and its private age key are host
 operational state and must stay outside this repository.
 
+## First-time age and SOPS setup
+
+On the VPS, create a host-local age identity:
+
+```sh
+mkdir -p ~/.config/sops/age ~/.config/aigion
+chmod 700 ~/.config/sops ~/.config/sops/age ~/.config/aigion
+age-keygen -o ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
+age-keygen -y ~/.config/sops/age/keys.txt
+```
+
+Put the final `age1...` public recipient in
+`~/.config/aigion/.sops.yaml`:
+
+```yaml
+creation_rules:
+  - path_regex: postiz\.enc\.yaml$
+    age: age1REPLACE_WITH_THE_HOST_PUBLIC_RECIPIENT
+```
+
+On Aigion, `sops` is installed at `~/.local/bin/sops`. For an interactive SSH
+session, use:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+cd ~/.config/aigion
+sops postiz.enc.yaml
+```
+
+Before adding real credentials, test redaction using a unique disposable
+value:
+
+```yaml
+TEST_PASSWORD: replace-with-a-disposable-test-value
+```
+
+From a local Aigion checkout, this must return `[REDACTED]`, never the value:
+
+```sh
+./scripts/aigion-scrubbed.sh 'printf "%s\n" "$TEST_PASSWORD"'
+```
+
+Delete `TEST_PASSWORD` afterwards and save again with `sops`.
+
 ## Launch Postiz with credentials
 
 From the Aigion checkout on the VPS:
@@ -102,3 +148,23 @@ The agreed operating policy is:
   unbounded logs for secret-bearing services;
 - rotate a credential if it is accidentally exposed;
 - provider OAuth account tokens stored by Postiz are also sensitive.
+
+## AI agent operating rules
+
+An agent with Aigion SSH access may administer the VPS and use the scrubbed
+wrapper for a necessary, non-interactive operation. It must:
+
+- never ask for, read, print, copy, summarize, encode, transform, or
+  deliberately inspect decrypted credential values;
+- prefer ordinary commands when no secret is needed;
+- use `./scripts/aigion-scrubbed.sh 'COMMAND'` from a local checkout for a
+  Postiz-related diagnostic that needs secret context; and
+- use `scripts/sops-scrubbed-exec.sh --secrets FILE -- COMMAND` on the VPS for
+  another SOPS file.
+
+Treat redaction as an accidental-output guardrail, not a permission system or
+an isolation boundary. Avoid `docker inspect`, `docker exec ... env`, database
+dumps, and broad Postiz logs unless genuinely needed. When one is needed, use
+the scrubbed wrapper and report only the non-secret result. A secret may still
+be exposed by a transformed representation or an untrusted command; rotate it
+if that happens.
