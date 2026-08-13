@@ -41,5 +41,6 @@ inventory:
 
 `--submit` creates a Postiz draft only. Review and publish it in Postiz.
 
-For this deployment, `POSTIZ_API_URL` is
-`https://postiz.qtpi.app/api/public/v1`.
+On the VPS, the helper defaults to Postiz's private loopback API endpoint.
+This intentionally avoids routing API credentials through Cloudflare. Only set
+`POSTIZ_API_URL` when using a different self-hosted topology.

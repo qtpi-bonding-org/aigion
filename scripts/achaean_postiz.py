@@ -37,9 +37,10 @@ if not isinstance(inventory, dict):
 api_key = inventory.get("POSTIZ_API_KEY")
 if not isinstance(api_key, str) or not api_key:
     fail("POSTIZ_API_KEY is missing from the encrypted inventory")
-api_url = inventory.get("POSTIZ_API_URL", "https://postiz.qtpi.app/api/public/v1")
-if not isinstance(api_url, str) or not api_url.startswith("https://"):
-    fail("POSTIZ_API_URL must be an https URL")
+api_url = inventory.get("POSTIZ_API_URL", "http://127.0.0.1:4007/api/public/v1")
+allowed_loopback = api_url.startswith("http://127.0.0.1:") if isinstance(api_url, str) else False
+if not isinstance(api_url, str) or not (api_url.startswith("https://") or allowed_loopback):
+    fail("POSTIZ_API_URL must be https, or an explicit 127.0.0.1 URL")
 api_url = api_url.rstrip("/")
 
 if command[0] == "integrations" and len(command) == 1:
