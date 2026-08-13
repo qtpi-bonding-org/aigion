@@ -60,7 +60,7 @@ jobs:
               --arg date "$timestamp" \
               --argjson tags "$tags" \
               --argjson posts "$posts_array" \
-              '{type: "now", shortLink: false, date: $date, tags: $tags, posts: $posts}')
+              '{type: "draft", shortLink: false, date: $date, tags: $tags, posts: $posts}')
 
             echo "Payload:"
             echo "$payload" | jq .

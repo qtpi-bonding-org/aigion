@@ -1,3 +1,5 @@
 .env
 specs/
 memory/
+syndication/postiz-routing.json
+__pycache__/

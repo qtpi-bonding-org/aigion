@@ -1,0 +1,10 @@
+{
+  "routing": {
+    "short": { "max_characters": 280, "channels": ["bluesky"] },
+    "long": { "channels": ["mastodon"] }
+  },
+  "channels": {
+    "bluesky": { "integration_id": "test-bluesky", "provider": "bluesky" },
+    "mastodon": { "integration_id": "test-mastodon", "provider": "mastodon" }
+  }
+}

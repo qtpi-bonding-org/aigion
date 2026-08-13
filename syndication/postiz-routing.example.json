@@ -1,0 +1,22 @@
+{
+  "routing": {
+    "short": {
+      "max_characters": 280,
+      "channels": ["bluesky", "x", "threads", "mastodon", "nostr"]
+    },
+    "long": {
+      "channels": []
+    }
+  },
+  "channels": {
+    "bluesky": { "integration_id": "", "provider": "bluesky" },
+    "x": {
+      "integration_id": "",
+      "provider": "x",
+      "settings": { "who_can_reply_post": "everyone" }
+    },
+    "threads": { "integration_id": "", "provider": "threads" },
+    "mastodon": { "integration_id": "", "provider": "mastodon" },
+    "nostr": { "integration_id": "", "provider": "nostr" }
+  }
+}

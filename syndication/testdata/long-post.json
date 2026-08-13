@@ -1,0 +1,9 @@
+{
+  "content": {
+    "text": "This deliberately long test post proves that the publisher does not try to silently truncate or manufacture a thread. Canonical long-form content needs a deliberate summary and canonical-link policy before it goes to microblogging networks. Until we add that writing step, the safe behavior is to classify it as long and hold it for review rather than publish something misleading or incomplete."
+  },
+  "routing": { "tags": ["buildinpublic", "test"] },
+  "crosspost": { "postiz": { "strategy": "auto" } },
+  "timestamp": "2026-08-13T20:00:00.000Z",
+  "signature": "test-only"
+}

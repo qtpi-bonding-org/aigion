@@ -113,7 +113,7 @@ EOF
 
   # Assemble final Postiz payload
   jq -nc \
-    --arg type "now" \
+    --arg type "draft" \
     --arg date "$timestamp" \
     --argjson tags "$tags" \
     --argjson posts "$posts_array" \
