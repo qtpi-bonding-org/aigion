@@ -60,6 +60,9 @@ services:
     restart: unless-stopped
     ports:
       - "${POSTIZ_PORT:-4007}:5000"
+      # Loopback only: lets the publisher use the backend directly without
+      # sending its API key through Cloudflare or the frontend nginx proxy.
+      - "${POSTIZ_BACKEND_PORT:-127.0.0.1:4008}:3000"
     environment:
       MAIN_URL: ${POSTIZ_MAIN_URL:-https://post.${DOMAIN}}
       FRONTEND_URL: ${POSTIZ_FRONTEND_URL:-https://post.${DOMAIN}}
