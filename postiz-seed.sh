@@ -24,7 +24,7 @@ if [ -z "$ADMIN_PASS" ]; then
   exit 1
 fi
 
-POSTIZ_URL="http://127.0.0.1:${POSTIZ_PORT:-4007}"
+POSTIZ_URL="http://127.0.0.1:${POSTIZ_PORT:-4007}/api"
 
 echo "[postiz-seed] Creating first user: $ADMIN_EMAIL"
 
@@ -39,6 +39,14 @@ RESPONSE=$(curl -sf -X POST "$POSTIZ_URL/auth/register" \
 
 if echo "$RESPONSE" | grep -q "error\|Error"; then
   echo "[postiz-seed] ERROR: $RESPONSE"
+  exit 1
+fi
+
+USER_COUNT=$(docker compose exec -T postiz-postgres \
+  psql -U "${POSTIZ_DB_USER:-postiz}" -d "${POSTIZ_DB_NAME:-postiz}" -Atc \
+  'SELECT count(*) FROM "User";')
+if [ "$USER_COUNT" -lt 1 ]; then
+  echo "[postiz-seed] ERROR: registration response did not create a user." >&2
   exit 1
 fi
 
