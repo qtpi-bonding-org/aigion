@@ -50,7 +50,19 @@ if command[0] == "integrations" and len(command) == 1:
         with urllib.request.urlopen(request, timeout=30) as response:
             integrations = json.loads(response.read())
     except urllib.error.HTTPError as error:
-        fail(f"Postiz integrations request failed (HTTP {error.code})")
+        # Response bodies can contain provider/account data, so expose only
+        # transport metadata and JSON field names for diagnosis.
+        try:
+            body = json.loads(error.read())
+            body_keys = ",".join(sorted(body.keys())) if isinstance(body, dict) else "non-object"
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            body_keys = "unreadable"
+        server = error.headers.get("server", "unknown")
+        content_type = error.headers.get("content-type", "unknown")
+        fail(
+            f"Postiz integrations request failed (HTTP {error.code}; "
+            f"server={server}; content-type={content_type}; body-keys={body_keys})"
+        )
     if not isinstance(integrations, list):
         fail("Postiz returned an unexpected integrations response")
     for integration in integrations:
