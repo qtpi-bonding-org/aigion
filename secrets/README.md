@@ -57,16 +57,20 @@ the script again after adding or rotating provider application credentials.
 
 ## Scrubbed operational commands
 
-For non-interactive commands that need provider credentials, use
-`scripts/postiz-scrubbed-exec.sh`. It decrypts the same file into a temporary
-private file, passes the values only to the child process, and replaces literal
-secret values in combined stdout/stderr before returning output. For example:
+For any SOPS-encrypted file, use `scripts/sops-scrubbed-exec.sh`. It decrypts
+the file into a temporary private file, passes top-level scalar values only to
+the child process, and replaces literal secret values (including nested values)
+in combined stdout/stderr before returning output. For example:
 
 ```bash
 SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
 SOPS_BIN="$HOME/.local/bin/sops" \
-./scripts/postiz-scrubbed-exec.sh docker compose up -d --force-recreate postiz
+./scripts/sops-scrubbed-exec.sh --secrets ~/.config/aigion/postiz.enc.yaml -- \
+  docker inspect aigion-postiz
 ```
+
+`scripts/postiz-scrubbed-exec.sh` is a convenience wrapper for that same
+command using `~/.config/aigion/postiz.enc.yaml`.
 
 This is an accidental-output guardrail, not an isolation boundary. It cannot
 prevent a command from transforming or transmitting a secret, and must not be
