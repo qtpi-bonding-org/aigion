@@ -55,6 +55,23 @@ are not written to the checkout or printed by the script.
 The container retains its configured environment until it is recreated. Run
 the script again after adding or rotating provider application credentials.
 
+## Scrubbed operational commands
+
+For non-interactive commands that need provider credentials, use
+`scripts/postiz-scrubbed-exec.sh`. It decrypts the same file into a temporary
+private file, passes the values only to the child process, and replaces literal
+secret values in combined stdout/stderr before returning output. For example:
+
+```bash
+SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
+SOPS_BIN="$HOME/.local/bin/sops" \
+./scripts/postiz-scrubbed-exec.sh docker compose up -d --force-recreate postiz
+```
+
+This is an accidental-output guardrail, not an isolation boundary. It cannot
+prevent a command from transforming or transmitting a secret, and must not be
+used for interactive commands or as permission to inspect credentials.
+
 ## Trust model and operational policy
 
 This protects against accidental source-control and terminal-output leaks; it
