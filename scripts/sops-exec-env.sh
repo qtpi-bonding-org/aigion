@@ -19,4 +19,11 @@ if [[ ! -f "$secrets_file" ]]; then
   echo "Missing encrypted secrets file: $secrets_file" >&2
   exit 1
 fi
-exec "$sops_bin" exec-env "$secrets_file" -- "$@"
+# This SOPS build parses target-command flags as its own when they are passed
+# directly. Feed Bash a safely quoted `exec` statement over stdin instead, so
+# SOPS receives only the encrypted inventory and the shell command.
+{
+  printf 'exec'
+  printf ' %q' "$@"
+  printf '\n'
+} | "$sops_bin" exec-env "$secrets_file" -- /bin/bash
