@@ -50,4 +50,4 @@ for index in "${!secrets_files[@]}"; do
   temporary_files+=("$temporary_file")
 done
 
-exec python3 "$repo_root/scripts/redact-output.py" "${temporary_files[@]}" -- "$@"
+python3 "$repo_root/scripts/redact-output.py" "${temporary_files[@]}" -- "$@"
