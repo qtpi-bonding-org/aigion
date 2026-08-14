@@ -51,6 +51,29 @@ inventory:
 
 `--submit` creates a Postiz draft only. Review and publish it in Postiz.
 
+## Generate canonical drafts from product changes
+
+CS Pipeline is included as an Aigion submodule. It reads a product repository's
+latest commit and writes canonical Achaean drafts into a separate checked-out
+content repository. It has no Postiz credential or publishing step:
+
+```sh
+OPENROUTER_API_KEY=... \
+  ./scripts/cs-pipeline-draft.sh /path/to/product-repo /path/to/content-repo
+```
+
+The product repository supplies `.github/cs-pipeline.toml`. The result is one
+or more `posts/<date>-<slug>/post.json` files with
+`crosspost.postiz.strategy: "auto"`. Review and commit them to the content
+repository, then run this bridge to create Postiz drafts. The runner itself
+does not commit, push, call Postiz, or publish.
+
+For a fresh Aigion clone, initialize everything with:
+
+```sh
+git clone --recurse-submodules <aigion-repo>
+```
+
 On the VPS, the helper defaults to Postiz's private loopback API endpoint.
 This intentionally avoids routing API credentials through Cloudflare. Only set
 `POSTIZ_API_URL` when using a different self-hosted topology.
