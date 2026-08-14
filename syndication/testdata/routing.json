@@ -1,10 +1,31 @@
 {
   "routing": {
-    "short": { "max_characters": 280, "channels": ["bluesky"] },
-    "long": { "channels": ["mastodon"] }
+    "short": {
+      "max_characters": 280,
+      "channels": ["bluesky", "x", "threads", "mastodon"]
+    },
+    "long": { "channels": ["threads", "mastodon"] }
   },
   "channels": {
-    "bluesky": { "integration_id": "test-bluesky", "provider": "bluesky" },
-    "mastodon": { "integration_id": "test-mastodon", "provider": "mastodon" }
+    "bluesky": {
+      "integration_id": "test-bluesky",
+      "provider": "bluesky",
+      "max_characters": 300
+    },
+    "x": {
+      "integration_id": "test-x",
+      "provider": "x",
+      "max_characters": 280
+    },
+    "threads": {
+      "integration_id": "test-threads",
+      "provider": "threads",
+      "max_characters": 500
+    },
+    "mastodon": {
+      "integration_id": "test-mastodon",
+      "provider": "mastodon",
+      "max_characters": 500
+    }
   }
 }
