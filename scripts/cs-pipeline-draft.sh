@@ -7,7 +7,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
   cat >&2 <<'EOF'
-usage: scripts/cs-pipeline-draft.sh REPOSITORY_URL CONTENT_REPO [CONFIG_PATH]
+usage: scripts/cs-pipeline-draft.sh [--dry-run] REPOSITORY_URL CONTENT_REPO [CONFIG_PATH]
 
 REPOSITORY_URL product repository to clone into Aigion's fixed CS Pipeline
                source checkout
@@ -18,10 +18,18 @@ CONFIG_PATH   config relative to the fixed source checkout
 Requires OPENROUTER_API_KEY in the environment. The command writes canonical
 drafts only; it never commits, pushes, calls Postiz, or publishes.
 
+--dry-run   ask the generator to plan and print a draft without writing it.
+
 The fixed checkout defaults to ~/.local/share/aigion/cs-pipeline-target.
 Set CS_PIPELINE_SOURCE_DIR only when intentionally using a different workspace.
 EOF
 }
+
+dry_run=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+  dry_run=true
+  shift
+fi
 
 if [[ $# -lt 2 || $# -gt 3 ]]; then
   usage
@@ -76,4 +84,8 @@ if [[ ! -x "$python_bin" ]]; then
 fi
 
 cd "$source_repo"
-exec "$python_bin" "$pipeline" --config "$config_path" --output-dir "$content_repo" --write
+command=("$python_bin" "$pipeline" --config "$config_path" --output-dir "$content_repo")
+if [[ "$dry_run" != true ]]; then
+  command+=(--write)
+fi
+exec "${command[@]}"

@@ -66,6 +66,9 @@ OPENROUTER_API_KEY=... \
     /path/to/content-repo
 ```
 
+Add `--dry-run` before the repository URL to inspect the generated text
+without creating a `post.json` file.
+
 The product repository supplies `.github/cs-pipeline.toml`. The runner keeps
 seven days of shallow history by default, which supports a daily aggregation
 window while avoiding a full clone. The result is one or more
