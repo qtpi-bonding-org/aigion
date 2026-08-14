@@ -1,0 +1,50 @@
+name: Continuous Syndication
+
+on:
+  workflow_call:
+    inputs:
+      config_path:
+        type: string
+        default: ".github/cs-pipeline.toml"
+      output_dir:
+        type: string
+        default: ".achaean-drafts"
+    secrets:
+      openrouter_api_key:
+        required: true
+
+jobs:
+  syndicate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout calling repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Checkout cs-pipeline
+        uses: actions/checkout@v4
+        with:
+          repository: qtpi-bonding-org/cs-pipeline
+          path: .cs-pipeline
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r .cs-pipeline/requirements.txt
+
+      - name: Run syndication
+        env:
+          CONFIG_PATH: ${{ inputs.config_path }}
+          OPENROUTER_API_KEY: ${{ secrets.openrouter_api_key }}
+        run: python .cs-pipeline/scripts/syndicate.py --output-dir "${{ inputs.output_dir }}" --write
+
+      - name: Upload canonical Achaean drafts
+        uses: actions/upload-artifact@v4
+        with:
+          name: achaean-drafts
+          path: ${{ inputs.output_dir }}/posts
+          if-no-files-found: ignore
