@@ -53,7 +53,7 @@ inventory:
 
 ## Generate canonical drafts from product changes
 
-CS Pipeline is included as an Aigion submodule. It reads a product repository's
+CS Pipeline is vendored into Aigion for a self-contained deployment. It reads a product repository's
 latest commit and writes canonical Achaean drafts into a separate checked-out
 content repository. It has no Postiz credential or publishing step:
 
@@ -68,7 +68,8 @@ or more `posts/<date>-<slug>/post.json` files with
 repository, then run this bridge to create Postiz drafts. The runner itself
 does not commit, push, call Postiz, or publish.
 
-For a fresh Aigion clone, initialize everything with:
+CS Pipeline needs no separate clone. Achaean remains Aigion's existing
+submodule, so initialize a fresh full stack with:
 
 ```sh
 git clone --recurse-submodules <aigion-repo>

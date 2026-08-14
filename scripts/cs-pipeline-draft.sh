@@ -41,7 +41,7 @@ if [[ ! -f "$source_repo/$config_path" ]]; then
   exit 2
 fi
 if [[ ! -f "$pipeline" ]]; then
-  echo "CS Pipeline submodule is unavailable; run git submodule update --init --recursive" >&2
+  echo "Vendored CS Pipeline source is missing from this Aigion checkout." >&2
   exit 2
 fi
 if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
