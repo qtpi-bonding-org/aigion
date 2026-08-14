@@ -91,10 +91,13 @@ value:
 TEST_PASSWORD: replace-with-a-disposable-test-value
 ```
 
-From a local Aigion checkout, this must return `[REDACTED]`, never the value:
+The explicit injection test below must return a labeled redaction marker, never
+the value:
 
 ```sh
-./scripts/aigion-scrubbed.sh 'printf "%s\n" "$TEST_PASSWORD"'
+./scripts/sops-exec-env.sh --secrets ~/.config/aigion/postiz.enc.yaml -- \
+  ./scripts/sops-redact-exec.sh --secrets ~/.config/aigion/postiz.enc.yaml -- \
+  bash -c 'printf "%s\n" "$TEST_PASSWORD"'
 ```
 
 Delete `TEST_PASSWORD` afterwards and remove the now-empty encrypted file:
@@ -126,22 +129,24 @@ the script again after adding or rotating provider application credentials.
 
 ## Scrubbed operational commands
 
-For any SOPS-encrypted file, use `scripts/sops-scrubbed-exec.sh`. It decrypts
-the file into a temporary private file, passes top-level scalar values only to
-the child process, and replaces literal secret values (including nested values)
-in combined stdout/stderr before returning output. A top-level value such as
-`X_API_SECRET` is displayed as `[REDACTED:X_API_SECRET]`, so diagnostics retain
-the name of the protected field. For example:
+For a non-interactive command whose output needs redaction, use
+`scripts/sops-redact-exec.sh`. It decrypts selected inventories into temporary
+private files and replaces literal secret values (including nested values) in
+combined stdout/stderr. It does **not** pass those values to the child process.
+A top-level value such as `X_API_SECRET` is displayed as
+`[REDACTED:X_API_SECRET]`, so diagnostics retain the name of the protected
+field. For example:
 
 ```bash
 SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
 SOPS_BIN="$HOME/.local/bin/sops" \
-./scripts/sops-scrubbed-exec.sh --secrets ~/.config/aigion/postiz.enc.yaml -- \
+./scripts/sops-redact-exec.sh --secrets ~/.config/aigion/postiz.enc.yaml -- \
   docker inspect aigion-postiz
 ```
 
-`scripts/postiz-scrubbed-exec.sh` is a convenience wrapper for that same
-command using `~/.config/aigion/postiz.enc.yaml`.
+For the rare case a named service helper genuinely needs environment variables,
+use `scripts/sops-exec-env.sh --secrets FILE -- COMMAND` explicitly. Do not use
+it as a generic diagnostic wrapper.
 
 From a local Aigion checkout, the usual short form is:
 
@@ -149,11 +154,11 @@ From a local Aigion checkout, the usual short form is:
 ./scripts/aigion-scrubbed.sh 'docker inspect aigion-postiz'
 ```
 
-It sends one command to the VPS through the `aigion` SSH alias, with the
-Postiz secret file and scrubber selected remotely. The command is passed over
-stdin instead of interpolated into the SSH command. This default is for
-Postiz-related diagnostics; use `sops-scrubbed-exec.sh --secrets ...` directly
-on the VPS for another encrypted file.
+It sends one command to the VPS through the `aigion` SSH alias and redacts
+literal values from every `*.enc.yaml`, `*.enc.yml`, and `*.enc.json` inventory
+under `~/.config/aigion`. The command is passed over stdin instead of
+interpolated into the SSH command. Those secrets are not injected into the
+command environment.
 
 This is an accidental-output guardrail, not an isolation boundary. It cannot
 prevent a command from transforming or transmitting a secret, and must not be
@@ -184,9 +189,11 @@ wrapper for a necessary, non-interactive operation. It must:
 - prefer ordinary commands when no secret is needed, and otherwise use the
   scrubbed path rather than raw SSH output;
 - use `./scripts/aigion-scrubbed.sh 'COMMAND'` from a local checkout for a
-  Postiz-related diagnostic that needs secret context; and
-- use `scripts/sops-scrubbed-exec.sh --secrets FILE -- COMMAND` on the VPS for
-  another SOPS file.
+  diagnostic whose output should be redacted against every Aigion inventory;
+- use `scripts/sops-redact-exec.sh --secrets FILE -- COMMAND` on the VPS for
+  a selected inventory; and
+- use `scripts/sops-exec-env.sh` only through a narrowly scoped service helper
+  that actually needs a selected inventory's environment variables.
 
 Treat redaction as an accidental-output guardrail, not a permission system or
 an isolation boundary. Avoid `docker inspect`, `docker exec ... env`, database

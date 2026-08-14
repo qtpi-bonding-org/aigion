@@ -20,10 +20,10 @@ point. It finds every `*.enc.yaml`, `*.enc.yml`, and `*.enc.json` file under
 `~/.config/aigion`, then uses them all for redaction only. A command run there
 does not receive those secrets as environment variables.
 
-`scripts/postiz-scrubbed-exec.sh` is the intentional exception: it injects the
-Postiz inventory only, while also redacting its literal values. The dedicated
-`achaean-postiz.sh` and `postiz-with-secrets.sh` helpers remain the preferred
-ways to give Postiz exactly the values it needs.
+The dedicated `achaean-postiz.sh` and `postiz-with-secrets.sh` helpers remain
+the preferred ways to give Postiz exactly the values it needs. Do not add a
+generic service-specific injector; compose `sops-exec-env.sh` with
+`sops-redact-exec.sh` only when a future named helper genuinely requires it.
 
 Redaction is a guardrail, not a security boundary. It cannot hide transformed,
 hashed, encoded, or provider-derived values. Do not use raw container inspect,
