@@ -3,4 +3,4 @@
 	url = ../achaean
 [submodule "cs-pipeline"]
 	path = cs-pipeline
-	url = https://github.com/qtpi-bonding-org/cs-pipeline.git
+	url = git@github.com:qtpi-bonding-org/cs-pipeline.git
