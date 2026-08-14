@@ -8,15 +8,25 @@
       "channels": []
     }
   },
+  "filters": {
+    "skip_replies": true,
+    "min_characters": 24,
+    "blocked_tags": ["test", "private", "wip", "do-not-publish"]
+  },
+  "state_file": ".postiz-draft-state.json",
   "channels": {
-    "bluesky": { "integration_id": "", "provider": "bluesky" },
+    "bluesky": { "integration_id": "", "provider": "bluesky", "max_characters": 300 },
     "x": {
       "integration_id": "",
       "provider": "x",
+      "max_characters": 280,
       "settings": { "who_can_reply_post": "everyone" }
     },
-    "threads": { "integration_id": "", "provider": "threads" },
-    "mastodon": { "integration_id": "", "provider": "mastodon" },
-    "nostr": { "integration_id": "", "provider": "nostr" }
+    "threads": { "integration_id": "", "provider": "threads", "max_characters": 500 },
+    "mastodon": { "integration_id": "", "provider": "mastodon", "max_characters": 500 },
+    "instagram": { "integration_id": "", "provider": "instagram-standalone", "requires_media": true },
+    "youtube": { "integration_id": "", "provider": "youtube", "requires_media": true },
+    "reddit": { "integration_id": "", "provider": "reddit", "requires_community": true },
+    "lemmy": { "integration_id": "", "provider": "lemmy", "requires_community": true }
   }
 }

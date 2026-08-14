@@ -1,0 +1,7 @@
+{
+  "content": { "text": "This is a deliberately private canonical post and must not be syndicated." },
+  "routing": { "tags": ["private"] },
+  "crosspost": { "postiz": { "strategy": "auto" } },
+  "timestamp": "2026-08-13T20:00:00.000Z",
+  "signature": "test-only"
+}

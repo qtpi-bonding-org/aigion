@@ -3,7 +3,7 @@
     "text": "The Achaean → Postiz bridge now creates drafts from canonical git posts.",
     "title": "Publishing pipeline test"
   },
-  "routing": { "tags": ["buildinpublic", "test"] },
+  "routing": { "tags": ["buildinpublic"] },
   "crosspost": { "postiz": { "strategy": "auto" } },
   "timestamp": "2026-08-13T20:00:00.000Z",
   "signature": "test-only"

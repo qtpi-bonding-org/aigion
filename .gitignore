@@ -2,4 +2,5 @@
 specs/
 memory/
 syndication/postiz-routing.json
+syndication/.postiz-draft-state.json
 __pycache__/

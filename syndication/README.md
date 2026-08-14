@@ -13,11 +13,21 @@ A canonical post opts in with:
 }
 ```
 
-The local `postiz-routing.json` policy classifies rendered text by character
-count. The example policy routes text at or below 280 characters to configured
-microblog channels. Longer posts intentionally have no default destinations:
-they need a deliberate summary/canonical-link policy, not an automatic
-truncation or accidental full-text crosspost.
+The local `postiz-routing.json` policy is a filter and routing layer:
+
+- only posts with `crosspost.postiz.strategy: "auto"` opt in;
+- replies, tiny posts, and `test`, `private`, `wip`, or `do-not-publish` tagged
+  posts are held;
+- an identical canonical post is submitted only once;
+- each channel has a limit/eligibility check, so a post that fits Threads but
+  not X produces only the valid draft targets;
+- Instagram and YouTube wait for canonical-media uploading, while Reddit and
+  Lemmy wait for an explicitly configured community.
+
+The example routes short text to configured microblog channels. Longer posts
+intentionally have no default destinations: they need a deliberate
+summary/canonical-link policy, not automatic truncation or an accidental
+full-text crosspost.
 
 Per-channel integration IDs belong only in `postiz-routing.json`; copy the
 example and do not commit the real file. List the public routing metadata with
