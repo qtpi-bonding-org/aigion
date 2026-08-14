@@ -1,3 +1,6 @@
 [submodule "achaean"]
 	path = achaean
 	url = ../achaean
+[submodule "cs-pipeline"]
+	path = cs-pipeline
+	url = git@github.com:qtpi-bonding-org/cs-pipeline.git
