@@ -53,17 +53,23 @@ inventory:
 
 ## Generate canonical drafts from product changes
 
-CS Pipeline is included as an Aigion submodule. It reads a product repository's
-latest commit and writes canonical Achaean drafts into a separate checked-out
-content repository. It has no Postiz credential or publishing step:
+CS Pipeline is included as an Aigion submodule. It clones the requested
+product repository into the fixed checkout
+`~/.local/share/aigion/cs-pipeline-target`, verifies its `origin` on every
+run, and writes canonical Achaean drafts into a separate checked-out content
+repository. It has no Postiz credential or publishing step:
 
 ```sh
 OPENROUTER_API_KEY=... \
-  ./scripts/cs-pipeline-draft.sh /path/to/product-repo /path/to/content-repo
+  ./scripts/cs-pipeline-draft.sh \
+    https://github.com/qtpi-bonding-org/pocketcoder.git \
+    /path/to/content-repo
 ```
 
-The product repository supplies `.github/cs-pipeline.toml`. The result is one
-or more `posts/<date>-<slug>/post.json` files with
+The product repository supplies `.github/cs-pipeline.toml`. The runner keeps
+seven days of shallow history by default, which supports a daily aggregation
+window while avoiding a full clone. The result is one or more
+`posts/<date>-<slug>/post.json` files with
 `crosspost.postiz.strategy: "auto"`. Review and commit them to the content
 repository, then run this bridge to create Postiz drafts. The runner itself
 does not commit, push, call Postiz, or publish.
