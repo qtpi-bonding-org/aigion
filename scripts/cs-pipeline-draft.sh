@@ -27,6 +27,8 @@ source_repo="$1"
 content_repo="$2"
 config_path="${3:-.github/cs-pipeline.toml}"
 pipeline="$repo_root/cs-pipeline/scripts/syndicate.py"
+venv_python="$repo_root/.venv-cs-pipeline/bin/python3"
+python_bin="${CS_PIPELINE_PYTHON:-$venv_python}"
 
 if [[ ! -d "$source_repo/.git" ]]; then
   echo "SOURCE_REPO must be a git checkout: $source_repo" >&2
@@ -48,6 +50,9 @@ if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
   echo "OPENROUTER_API_KEY is required (supply it through your secret runner)." >&2
   exit 2
 fi
+if [[ ! -x "$python_bin" ]]; then
+  python_bin="python3"
+fi
 
 cd "$source_repo"
-exec python3 "$pipeline" --config "$config_path" --output-dir "$content_repo" --write
+exec "$python_bin" "$pipeline" --config "$config_path" --output-dir "$content_repo" --write
