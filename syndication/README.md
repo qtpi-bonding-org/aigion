@@ -21,8 +21,10 @@ The local `postiz-routing.json` policy is a filter and routing layer:
 - an identical canonical post is submitted only once;
 - each channel has a limit/eligibility check, so a post that fits Threads but
   not X produces only the valid draft targets;
-- Instagram and YouTube wait for canonical-media uploading, while Reddit and
-  Lemmy wait for an explicitly configured community.
+- Canonical media files beside `post.json` are uploaded to Postiz and attached
+  to every eligible draft. Instagram and YouTube still require their own
+  configured channel settings; Reddit and Lemmy wait for an explicitly
+  configured community.
 
 The example routes short text to configured microblog channels. Longer posts
 intentionally have no default destinations: they need a deliberate
@@ -50,6 +52,24 @@ inventory:
 ```
 
 `--submit` creates a Postiz draft only. Review and publish it in Postiz.
+
+### Canonical media
+
+Put image or video files in the same directory as `post.json` and list their
+relative filenames in `content.media`:
+
+```json
+{
+  "content": {
+    "text": "A build update with a screenshot.",
+    "media": ["pocketcoder-phone.png"]
+  }
+}
+```
+
+On `--submit`, the bridge validates that each file stays inside that post
+directory, uploads it to Postiz, and attaches the returned asset to every
+eligible draft. A dry run never uploads media.
 
 ## Generate canonical drafts from product changes
 

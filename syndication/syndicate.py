@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import mimetypes
 import json
 import os
 import hashlib
@@ -17,6 +18,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -122,7 +124,11 @@ def route_for(post: dict[str, Any], config: dict[str, Any], social_text: str) ->
 
 
 def channel_entries(
-    config: dict[str, Any], route_name: str, social_text: str, post: dict[str, Any]
+    config: dict[str, Any],
+    route_name: str,
+    social_text: str,
+    post: dict[str, Any],
+    media: list[dict[str, str]],
 ) -> tuple[list[dict[str, Any]], list[str]]:
     routes = config["routing"]
     selected = routes[route_name].get("channels", [])
@@ -133,8 +139,8 @@ def channel_entries(
     posts: list[dict[str, Any]] = []
     skipped: list[str] = []
     content = post.get("content", {})
-    media = content.get("media", []) if isinstance(content, dict) else []
-    has_media = isinstance(media, list) and bool(media)
+    canonical_media = content.get("media", []) if isinstance(content, dict) else []
+    has_media = isinstance(canonical_media, list) and bool(canonical_media)
     for name in selected:
         channel = channels.get(name)
         if not isinstance(name, str) or not isinstance(channel, dict):
@@ -166,17 +172,19 @@ def channel_entries(
         posts.append(
             {
                 "integration": {"id": integration_id},
-                "value": [{"content": social_text, "image": []}],
+                "value": [{"content": social_text, "image": media}],
                 "settings": {"__type": provider, **settings},
             }
         )
     return posts, skipped
 
 
-def postiz_payload(post: dict[str, Any], config: dict[str, Any]) -> tuple[str, dict[str, Any], list[str]]:
+def postiz_payload(
+    post: dict[str, Any], config: dict[str, Any], media: list[dict[str, str]]
+) -> tuple[str, dict[str, Any], list[str]]:
     social_text = text_for_social(post)
     route_name = route_for(post, config, social_text)
-    entries, skipped = channel_entries(config, route_name, social_text, post)
+    entries, skipped = channel_entries(config, route_name, social_text, post, media)
     tags = post_tags(post)
     timestamp = post.get("timestamp")
     if not isinstance(timestamp, str) or not timestamp:
@@ -191,9 +199,32 @@ def postiz_payload(post: dict[str, Any], config: dict[str, Any]) -> tuple[str, d
     return route_name, payload, skipped
 
 
-def submission_key(path: Path, post: dict[str, Any]) -> str:
+def canonical_media_paths(path: Path, post: dict[str, Any]) -> list[Path]:
+    content = post.get("content", {})
+    media = content.get("media", []) if isinstance(content, dict) else []
+    if not isinstance(media, list) or not all(isinstance(item, str) and item for item in media):
+        fail("post.content.media must be a list of non-empty filenames")
+
+    post_dir = path.parent.resolve()
+    files: list[Path] = []
+    for filename in media:
+        candidate = (post_dir / filename).resolve()
+        if candidate == post_dir or post_dir not in candidate.parents:
+            fail(f"canonical media must stay inside the post directory: {filename}")
+        if not candidate.is_file():
+            fail(f"canonical media file is missing: {filename}")
+        files.append(candidate)
+    return files
+
+
+def submission_key(path: Path, post: dict[str, Any], media_paths: list[Path]) -> str:
     canonical = json.dumps(post, sort_keys=True, separators=(",", ":")).encode()
-    return hashlib.sha256(str(path).encode() + b"\0" + canonical).hexdigest()
+    digest = hashlib.sha256(str(path).encode() + b"\0" + canonical)
+    for media_path in media_paths:
+        digest.update(media_path.name.encode())
+        digest.update(b"\0")
+        digest.update(media_path.read_bytes())
+    return digest.hexdigest()
 
 
 def load_state(config: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
@@ -234,6 +265,57 @@ def submit(payload: dict[str, Any]) -> Any:
         fail(f"Postiz rejected the draft (HTTP {error.code})")
 
 
+def multipart_body(field_name: str, file_path: Path) -> tuple[bytes, str]:
+    """Build a minimal multipart body without adding an HTTP dependency."""
+    boundary = f"----aigion-{uuid.uuid4().hex}"
+    mime_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    header = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{field_name}"; filename="{file_path.name}"\r\n'
+        f"Content-Type: {mime_type}\r\n\r\n"
+    ).encode()
+    body = header + file_path.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
+    return body, boundary
+
+
+def upload_media(media_paths: list[Path]) -> list[dict[str, str]]:
+    """Upload canonical media to Postiz and return safe attachment references."""
+    if not media_paths:
+        return []
+    api_url = os.environ.get("POSTIZ_API_URL", "").rstrip("/")
+    api_key = os.environ.get("POSTIZ_API_KEY", "")
+    if not api_url or not api_key:
+        fail("POSTIZ_API_URL and POSTIZ_API_KEY are required to upload media")
+
+    uploaded: list[dict[str, str]] = []
+    for media_path in media_paths:
+        body, boundary = multipart_body("file", media_path)
+        request = urllib.request.Request(
+            f"{api_url}/upload",
+            data=body,
+            headers={
+                "Authorization": api_key,
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                result = json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            fail(f"Postiz rejected canonical media '{media_path.name}' (HTTP {error.code})")
+        except (urllib.error.URLError, json.JSONDecodeError):
+            fail(f"could not upload canonical media '{media_path.name}' to Postiz")
+        if not isinstance(result, dict):
+            fail(f"Postiz returned an invalid media response for '{media_path.name}'")
+        identifier = result.get("id")
+        uploaded_path = result.get("path")
+        if not isinstance(identifier, str) or not identifier or not isinstance(uploaded_path, str) or not uploaded_path:
+            fail(f"Postiz media response lacked id/path for '{media_path.name}'")
+        uploaded.append({"id": identifier, "path": uploaded_path})
+    return uploaded
+
+
 def process(path: Path, config: dict[str, Any], submit_draft: bool, state: dict[str, Any], state_path: Path) -> bool:
     post = load_json(path)
     social_text = text_for_social(post)
@@ -241,17 +323,26 @@ def process(path: Path, config: dict[str, Any], submit_draft: bool, state: dict[
     if reasons:
         print(f"HOLD {path}: " + "; ".join(reasons))
         return True
-    key = submission_key(path, post)
+    try:
+        media_paths = canonical_media_paths(path, post)
+    except ValueError as error:
+        print(f"SKIP {path}: {error}")
+        return False
+    key = submission_key(path, post, media_paths)
     submitted = state["submitted"]
     if submit_draft and key in submitted:
         print(f"HOLD {path}: identical canonical content already submitted as a draft")
         return True
     try:
-        route_name, payload, skipped = postiz_payload(post, config)
+        media = upload_media(media_paths) if submit_draft else []
+        route_name, payload, skipped = postiz_payload(post, config, media)
     except ValueError as error:
         print(f"SKIP {path}: {error}")
         return False
-    print(f"PLAN {path}: route={route_name}, draft targets={len(payload['posts'])}")
+    print(
+        f"PLAN {path}: route={route_name}, draft targets={len(payload['posts'])}, "
+        f"canonical media={len(media_paths)}"
+    )
     if skipped:
         print("  unconfigured channels: " + ", ".join(skipped))
     if not payload["posts"]:
