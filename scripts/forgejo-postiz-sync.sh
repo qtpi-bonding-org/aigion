@@ -10,11 +10,22 @@ branch="${AIGION_CONTENT_BRANCH:-main}"
 lock_file="${AIGION_SYNC_LOCK:-$HOME/.cache/aigion/forgejo-postiz-sync.lock}"
 postiz_mode="${AIGION_POSTIZ_MODE:-draft}"
 postiz_date="${AIGION_POSTIZ_DATE:-}"
+postiz_schedule_time="${AIGION_POSTIZ_SCHEDULE_TIME:-10:00}"
+postiz_timezone="${AIGION_POSTIZ_TIMEZONE:-America/Los_Angeles}"
 
 case "$postiz_mode" in
   draft|now) ;;
   schedule)
-    [[ -n "$postiz_date" ]] || { echo "AIGION_POSTIZ_DATE is required when AIGION_POSTIZ_MODE=schedule" >&2; exit 2; }
+    if [[ -z "$postiz_date" ]]; then
+      # Postiz owns scheduling; this only computes the next 10:00 local slot.
+      # GNU date is available on the Ubuntu VPS.
+      now_epoch="$(date +%s)"
+      candidate="$(TZ="$postiz_timezone" date -d "today $postiz_schedule_time" +%s)"
+      if (( candidate <= now_epoch )); then
+        candidate="$(TZ="$postiz_timezone" date -d "tomorrow $postiz_schedule_time" +%s)"
+      fi
+      postiz_date="$(date -u -d "@$candidate" '+%Y-%m-%dT%H:%M:%S.000Z')"
+    fi
     ;;
   *) echo "AIGION_POSTIZ_MODE must be draft, schedule, or now" >&2; exit 2 ;;
 esac
