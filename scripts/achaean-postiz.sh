@@ -5,7 +5,9 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 secrets_file="${AIGION_POSTIZ_SECRETS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/aigion/postiz.enc.yaml}"
-sops_bin="${SOPS_BIN:-sops}"
+# Cron has a deliberately minimal PATH. Prefer the per-user installation used
+# by the VPS secret helpers, while still allowing an explicit override.
+sops_bin="${SOPS_BIN:-$HOME/.local/bin/sops}"
 default_age_key="$HOME/.config/sops/age/keys.txt"
 
 if [[ -z "${SOPS_AGE_KEY_FILE:-}" && -f "$default_age_key" ]]; then
