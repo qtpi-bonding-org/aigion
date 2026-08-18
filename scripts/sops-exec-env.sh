@@ -3,7 +3,8 @@
 # Use sops-redact-exec.sh around it when its output also needs redaction.
 set -euo pipefail
 
-sops_bin="${SOPS_BIN:-sops}"
+# Cron has a minimal PATH; use the per-user installation by default.
+sops_bin="${SOPS_BIN:-$HOME/.local/bin/sops}"
 default_age_key="$HOME/.config/sops/age/keys.txt"
 if [[ -z "${SOPS_AGE_KEY_FILE:-}" && -f "$default_age_key" ]]; then
   export SOPS_AGE_KEY_FILE="$default_age_key"
