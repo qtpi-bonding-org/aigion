@@ -14,7 +14,7 @@ if [[ -z "${SOPS_AGE_KEY_FILE:-}" && -f "$default_age_key" ]]; then
   export SOPS_AGE_KEY_FILE="$default_age_key"
 fi
 if [[ $# -lt 1 ]]; then
-  echo "usage: $0 integrations | draft [publisher arguments...]" >&2
+  echo "usage: $0 integrations | draft|schedule|now [publisher arguments...]" >&2
   exit 2
 fi
 if [[ ! -f "$secrets_file" ]]; then

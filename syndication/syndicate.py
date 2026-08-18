@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create safe Postiz drafts from canonical Achaean post.json files.
+"""Submit canonical Achaean post.json files to Postiz.
 
 The script never publishes by default.  Routing is defined outside the
 canonical post in a local policy file, while a post may opt in with
@@ -180,17 +180,25 @@ def channel_entries(
 
 
 def postiz_payload(
-    post: dict[str, Any], config: dict[str, Any], media: list[dict[str, str]]
+    post: dict[str, Any], config: dict[str, Any], media: list[dict[str, str]],
+    mode: str, scheduled_date: str | None = None
 ) -> tuple[str, dict[str, Any], list[str]]:
     social_text = text_for_social(post)
     route_name = route_for(post, config, social_text)
     entries, skipped = channel_entries(config, route_name, social_text, post, media)
     tags = post_tags(post)
-    timestamp = post.get("timestamp")
+    if mode not in {"draft", "schedule", "now"}:
+        fail("mode must be draft, schedule, or now")
+    timestamp = (
+        scheduled_date
+        if mode == "schedule"
+        else (dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+              if mode == "now" else post.get("timestamp"))
+    )
     if not isinstance(timestamp, str) or not timestamp:
         timestamp = dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     payload = {
-        "type": "draft",
+        "type": mode,
         "date": timestamp,
         "shortLink": False,
         "tags": [{"value": tag, "label": tag} for tag in tags],
@@ -250,7 +258,7 @@ def submit(payload: dict[str, Any]) -> Any:
     api_url = os.environ.get("POSTIZ_API_URL", "").rstrip("/")
     api_key = os.environ.get("POSTIZ_API_KEY", "")
     if not api_url or not api_key:
-        fail("POSTIZ_API_URL and POSTIZ_API_KEY are required for --submit")
+        fail("POSTIZ_API_URL and POSTIZ_API_KEY are required for submission")
     request = urllib.request.Request(
         f"{api_url}/posts",
         data=json.dumps(payload).encode(),
@@ -316,7 +324,7 @@ def upload_media(media_paths: list[Path]) -> list[dict[str, str]]:
     return uploaded
 
 
-def process(path: Path, config: dict[str, Any], submit_draft: bool, state: dict[str, Any], state_path: Path) -> bool:
+def process(path: Path, config: dict[str, Any], mode: str, state: dict[str, Any], state_path: Path, scheduled_date: str | None) -> bool:
     post = load_json(path)
     social_text = text_for_social(post)
     reasons = filter_reasons(post, config, social_text)
@@ -330,12 +338,13 @@ def process(path: Path, config: dict[str, Any], submit_draft: bool, state: dict[
         return False
     key = submission_key(path, post, media_paths)
     submitted = state["submitted"]
-    if submit_draft and key in submitted:
-        print(f"HOLD {path}: identical canonical content already submitted as a draft")
+    if mode != "plan" and key in submitted:
+        print(f"HOLD {path}: identical canonical content already submitted")
         return True
     try:
-        media = upload_media(media_paths) if submit_draft else []
-        route_name, payload, skipped = postiz_payload(post, config, media)
+        submit = mode != "plan"
+        media = upload_media(media_paths) if submit else []
+        route_name, payload, skipped = postiz_payload(post, config, media, mode if submit else "draft", scheduled_date)
     except ValueError as error:
         print(f"SKIP {path}: {error}")
         return False
@@ -348,7 +357,7 @@ def process(path: Path, config: dict[str, Any], submit_draft: bool, state: dict[
     if not payload["posts"]:
         print("  no configured targets; nothing submitted")
         return True
-    if not submit_draft:
+    if mode == "plan":
         print(json.dumps(payload, indent=2))
         return True
     submit(payload)
@@ -367,7 +376,8 @@ def main() -> int:
     parser.add_argument("--post", action="append", type=Path, help="canonical post.json to process")
     parser.add_argument("--changed", action="store_true", help="process post.json files changed in HEAD")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
-    parser.add_argument("--submit", action="store_true", help="create Postiz drafts (never publishes)")
+    parser.add_argument("--mode", choices=["plan", "draft", "schedule", "now"], default="plan")
+    parser.add_argument("--date", help="ISO-8601 date for Postiz schedule mode")
     args = parser.parse_args()
     if bool(args.post) == args.changed:
         parser.error("provide one or more --post paths, or --changed")
@@ -378,7 +388,9 @@ def main() -> int:
         if not paths:
             print("No changed canonical posts.")
             return 0
-        processed = [process(path, config, args.submit, state, state_path) for path in paths]
+        if args.mode == "schedule" and not args.date:
+            fail("--date is required with --mode schedule")
+        processed = [process(path, config, args.mode, state, state_path, args.date) for path in paths]
         return 0 if any(processed) else 1
     except ValueError as error:
         print(f"ERROR: {error}", file=sys.stderr)

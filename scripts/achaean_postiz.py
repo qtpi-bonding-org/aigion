@@ -25,7 +25,7 @@ separator = sys.argv.index("--")
 args = parser.parse_args(sys.argv[1:separator])
 command = sys.argv[separator + 1 :]
 if not command:
-    fail("expected integrations or draft")
+    fail("expected integrations or draft, schedule, or now")
 
 try:
     inventory = json.loads(args.secrets.read_text())
@@ -77,11 +77,14 @@ if command[0] == "integrations" and len(command) == 1:
         print(f"{identifier}\t{profile}\t{integration_id}{disabled}")
     raise SystemExit(0)
 
-if command[0] == "draft":
+if command[0] in {"draft", "schedule", "now"}:
     publisher = Path(__file__).resolve().parents[1] / "syndication" / "syndicate.py"
     env = os.environ.copy()
     env["POSTIZ_API_KEY"] = api_key
     env["POSTIZ_API_URL"] = api_url
-    os.execvpe("python3", ["python3", str(publisher), *command[1:], "--submit"], env)
+    mode = command[0]
+    if mode == "schedule" and "--date" not in command[1:]:
+        fail("schedule requires --date ISO-8601")
+    os.execvpe("python3", ["python3", str(publisher), *command[1:], "--mode", mode], env)
 
 fail("expected integrations or draft")
