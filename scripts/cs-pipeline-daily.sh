@@ -7,6 +7,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 product_url="${CS_PIPELINE_PRODUCT_URL:-https://github.com/qtpi-bonding-org/pocketcoder.git}"
 content_repo="${AIGION_CONTENT_REPO:-$HOME/content/pocketcoder-build-log}"
 config_path="${CS_PIPELINE_CONFIG_PATH:-.github/cs-pipeline.toml}"
+dry_run="${CS_PIPELINE_DAILY_DRY_RUN:-false}"
 
 if [[ ! -d "$content_repo/.git" ]]; then
   echo "missing Achaean content checkout: $content_repo" >&2
@@ -14,6 +15,9 @@ if [[ ! -d "$content_repo/.git" ]]; then
 fi
 
 before="$(git -C "$content_repo" status --porcelain -- posts)"
+if [[ "$dry_run" == "true" ]]; then
+  exec bash "$repo_root/scripts/cs-pipeline-draft.sh" --dry-run "$product_url" "$content_repo" "$config_path"
+fi
 "$repo_root/scripts/cs-pipeline-draft.sh" "$product_url" "$content_repo" "$config_path"
 after="$(git -C "$content_repo" status --porcelain -- posts)"
 
