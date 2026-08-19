@@ -342,9 +342,9 @@ def process(path: Path, config: dict[str, Any], mode: str, state: dict[str, Any]
         print(f"HOLD {path}: identical canonical content already submitted")
         return True
     try:
-        submit = mode != "plan"
-        media = upload_media(media_paths) if submit else []
-        route_name, payload, skipped = postiz_payload(post, config, media, mode if submit else "draft", scheduled_date)
+        should_submit = mode != "plan"
+        media = upload_media(media_paths) if should_submit else []
+        route_name, payload, skipped = postiz_payload(post, config, media, mode if should_submit else "draft", scheduled_date)
     except ValueError as error:
         print(f"SKIP {path}: {error}")
         return False
