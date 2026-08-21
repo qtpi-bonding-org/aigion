@@ -22,6 +22,9 @@ drafts only; it never commits, pushes, calls Postiz, or publishes.
 
 The fixed checkout defaults to ~/.local/share/aigion/cs-pipeline-target.
 Set CS_PIPELINE_SOURCE_DIR only when intentionally using a different workspace.
+
+The source commit is whichever of CS_PIPELINE_BRANCHES (default: "main
+staging") has the newest commit at fetch time, not always the default branch.
 EOF
 }
 
@@ -45,9 +48,13 @@ pipeline="$repo_root/cs-pipeline/scripts/syndicate.py"
 venv_python="$repo_root/.venv-cs-pipeline/bin/python3"
 python_bin="${CS_PIPELINE_PYTHON:-$venv_python}"
 
+# Candidate source branches, newest commit wins. Override with a
+# space-separated list, e.g. CS_PIPELINE_BRANCHES="main staging release".
+read -ra branch_candidates <<<"${CS_PIPELINE_BRANCHES:-main staging}"
+
 if [[ ! -d "$source_repo/.git" ]]; then
   mkdir -p "$(dirname "$source_repo")"
-  git clone --shallow-since="$shallow_since" "$repository_url" "$source_repo"
+  git clone --no-checkout --shallow-since="$shallow_since" "$repository_url" "$source_repo"
 else
   origin_url="$(git -C "$source_repo" remote get-url origin)"
   if [[ "$origin_url" != "$repository_url" ]]; then
@@ -60,9 +67,30 @@ else
     echo "Fixed CS Pipeline checkout has local changes; refusing to update it." >&2
     exit 2
   fi
-  git -C "$source_repo" fetch --shallow-since="$shallow_since" origin HEAD
-  git -C "$source_repo" merge --ff-only FETCH_HEAD
 fi
+
+# Explicit refspecs, not bare branch names: a plain clone only configures
+# a fetch refspec for its initial single branch, so fetching other branches
+# by name would only populate FETCH_HEAD and never create a stable
+# origin/<branch> ref to read back below.
+refspecs=()
+for branch in "${branch_candidates[@]}"; do
+  refspecs+=("+refs/heads/$branch:refs/remotes/origin/$branch")
+done
+git -C "$source_repo" fetch --shallow-since="$shallow_since" origin "${refspecs[@]}"
+
+source_branch="${branch_candidates[0]}"
+newest_epoch=-1
+for branch in "${branch_candidates[@]}"; do
+  epoch="$(git -C "$source_repo" log -1 --format=%ct "origin/$branch")"
+  if (( epoch > newest_epoch )); then
+    newest_epoch="$epoch"
+    source_branch="$branch"
+  fi
+done
+echo "CS Pipeline source branch: $source_branch (newest commit among: ${branch_candidates[*]})" >&2
+git -C "$source_repo" checkout --detach "origin/$source_branch"
+
 if [[ ! -d "$content_repo/.git" ]]; then
   echo "CONTENT_REPO must be a git checkout: $content_repo" >&2
   exit 2
